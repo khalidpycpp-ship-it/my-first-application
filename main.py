@@ -1,48 +1,46 @@
-import pygame
+import tkinter as tk
+from PIL import Image, ImageTk
 import requests
 from io import BytesIO
 import math
 
 # -----------------------------
-# INITIALISATION
-# -----------------------------
-pygame.init()
-WIDTH, HEIGHT = 800, 600
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Animation Image - Mouvement, Rotation, Zoom")
-clock = pygame.time.Clock()
-
-# -----------------------------
 # CHARGER IMAGE DEPUIS INTERNET
 # -----------------------------
 url = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Example.jpg/640px-Example.jpg"
-image_bytes = requests.get(url).content
-image_original = pygame.image.load(BytesIO(image_bytes)).convert_alpha()
+response = requests.get(url)
+image_original = Image.open(BytesIO(response.content)).convert("RGBA")
 
 # -----------------------------
-# VARIABLES DE MOUVEMENT
+# INITIALISATION FENÊTRE
 # -----------------------------
-x, y = WIDTH // 2, HEIGHT // 2
-vx, vy = 3, 2
+root = tk.Tk()
+root.title("Animation Image - Tkinter")
+WIDTH, HEIGHT = 800, 600
+
+canvas = tk.Canvas(root, width=WIDTH, height=HEIGHT, bg="black")
+canvas.pack()
+
+# -----------------------------
+# VARIABLES D'ANIMATION
+# -----------------------------
+x = WIDTH // 2
+y = HEIGHT // 2
+vx = 3
+vy = 2
 angle = 0
-time = 0
+t = 0
+
+photo = None
+image_id = None
 
 # -----------------------------
-# BOUCLE PRINCIPALE
+# FONCTION D'ANIMATION
 # -----------------------------
-running = True
-while running:
-    clock.tick(60)  # 60 FPS
-    screen.fill((20, 20, 20))
+def animate():
+    global x, y, vx, vy, angle, t, photo, image_id
 
-    # Gestion des événements
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-    # -----------------------------
-    # DÉPLACEMENT
-    # -----------------------------
+    # Déplacement
     x += vx
     y += vy
 
@@ -51,32 +49,29 @@ while running:
     if y < 100 or y > HEIGHT - 100:
         vy *= -1
 
-    # -----------------------------
-    # ROTATION
-    # -----------------------------
-    angle += 2
+    # Rotation
+    angle += 3
 
-    # -----------------------------
-    # ZOOM (oscillation sinusoïdale)
-    # -----------------------------
-    time += 0.05
-    scale = 1 + 0.3 * math.sin(time)
+    # Zoom (sinusoïdal)
+    t += 0.1
+    scale = 1 + 0.3 * math.sin(t)
 
-    # -----------------------------
-    # TRANSFORMATION IMAGE
-    # -----------------------------
-    image_transformed = pygame.transform.rotozoom(
-        image_original,
-        angle,
-        scale
-    )
+    # Transformation image
+    img = image_original.rotate(angle, expand=True)
+    w, h = img.size
+    img = img.resize((int(w * scale), int(h * scale)))
 
-    rect = image_transformed.get_rect(center=(x, y))
-    screen.blit(image_transformed, rect)
+    photo = ImageTk.PhotoImage(img)
 
-    pygame.display.flip()
+    # Affichage
+    canvas.delete("all")
+    canvas.create_image(x, y, image=photo)
+
+    # Relancer animation
+    root.after(30, animate)
 
 # -----------------------------
-# FERMETURE
+# LANCER ANIMATION
 # -----------------------------
-pygame.quit()
+animate()
+root.mainloop()
